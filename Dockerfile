@@ -1,9 +1,11 @@
 FROM opensuse:latest
 
+# Make sure we do not spend time preparing the OS
+# while the installation sources are not mounted.
 RUN test -f /tmp/NW751/install.sh
 
 # General information
-LABEL de.itsfullofstars.sapnwdocker.version="1.0.0"
+LABEL de.itsfullofstars.sapnwdocker.version="1.0.0-filak-sap-1"
 LABEL de.itsfullofstars.sapnwdocker.vendor="Tobias Hofmann"
 LABEL de.itsfullofstars.sapnwdocker.name="Docker for SAP NetWeaver 7.5x Developer Edition"
 
@@ -17,7 +19,7 @@ RUN mkdir /run/uuidd && chown uuidd /var/run/uuidd && /usr/sbin/uuidd
 # Prepare the shell script to install NW ABAP without asking for user input (using expect)
 # Note: Password being used is s@pABAP751
 RUN echo $'#!/usr/bin/expect -f \n\
-spawn /bin/bash /tmp/NW751/install.sh -s -k \n\
+spawn /bin/bash /tmp/NW751/install.sh -s -k -h vhcalnplci \n\
 set PASSWORD "s@pABAP751"\n\
 set timeout -1\n\
 expect "Hit enter to continue!" \n\
@@ -30,6 +32,7 @@ expect "Please re-enter password for verification:"\n\
 send  "$PASSWORD\\r"\n\
 expect eof' >> ./run.sh; chmod +x ./run.sh
 
+
 # Expose the ports to work with NW ABAP
 EXPOSE 8000
 EXPOSE 44300
@@ -38,7 +41,14 @@ EXPOSE 3200
 
 # HOSTNAME is imbued into SAP stuff - so we must convince the installer
 # to use the well known HOSTNAME.
-RUN  HOSTNAME="vhcalnplci"; echo $HOSTNAME > /etc/hostname; ./run.sh
+# And we have to try really hard so don't forget to start docker build with:
+# -v $PWD/mock_hostname/ld.so.preload -v $PWD/mock_hostname/libmockhostname.so:/usr/local/lib64/libmockhostname.so
+RUN  export HOSTNAME="vhcalnplci"; \
+     echo $HOSTNAME > /etc/hostname; \
+     echo "export HOSTNAME=$HOSTNAME" >> /etc/profile; \
+     echo 127.0.0.1   $HOSTNAME >> /etc/hosts; \
+     test $(hostname) == $HOSTNAME || exit 1; \
+     ./run.sh
 
 # Command sequence to use this Dockerfile
 
