@@ -8,6 +8,7 @@ RUN test -f /tmp/NW751/install.sh
 LABEL de.itsfullofstars.sapnwdocker.version="1.0.0-filak-sap-1"
 LABEL de.itsfullofstars.sapnwdocker.vendor="Tobias Hofmann"
 LABEL de.itsfullofstars.sapnwdocker.name="Docker for SAP NetWeaver 7.5x Developer Edition"
+LABEL modified_by="Jakub Filak <jakub.filak@sap.com>"
 
 # Install dependencies
 RUN zypper --non-interactive install --replacefiles  uuidd expect tcsh which iputils vim hostname tar net-tools iproute2
@@ -41,8 +42,13 @@ EXPOSE 3200
 
 # HOSTNAME is imbued into SAP stuff - so we must convince the installer
 # to use the well known HOSTNAME.
-# And we have to try really hard so don't forget to start docker build with:
+# And we have to try really hard, so don't forget to start docker build with:
+#
 # -v $PWD/mock_hostname/ld.so.preload -v $PWD/mock_hostname/libmockhostname.so:/usr/local/lib64/libmockhostname.so
+#
+# In case you want to know what the library does:
+#   https://github.com/jfilak/snippets/tree/master/mock_hostname
+#
 RUN  export HOSTNAME="vhcalnplci"; \
      echo $HOSTNAME > /etc/hostname; \
      echo "export HOSTNAME=$HOSTNAME" >> /etc/profile; \
@@ -50,50 +56,40 @@ RUN  export HOSTNAME="vhcalnplci"; \
      test $(hostname) == $HOSTNAME || exit 1; \
      ./run.sh
 
+# Avoid the need to start uuidd manually.
 RUN systemctl enable uuidd
+
+# Wrap the comman startsap in a systemd service, so we do not need to log in to
+# the container and start it manually.
 COPY nwabap.service /etc/systemd/system
 RUN systemctl enable nwabap
 
+# Here it comes, start your containers without the need to attach/exec and
+# start SAP processes manually.
+#
+# Do not forget to bind mount cgroups:
+# -v /sys/fs/cgroup:/sys/fs/cgroup:ro
+#
 ENTRYPOINT ["/usr/lib/systemd/systemd", "--system"]
 
 # Command sequence to use this Dockerfile
 
 # Before you start, please, configured docker to use devicemapper and set dm.basesize to 60G.
+#
+# $ docker daemon --storage-opt dm.basesize=60G
 
 # To avoid the need to copy the installation files (10s of GBs), mount the directory with
 # installation files to /tmp/NW751.
 
 # And don't forget to patch install.sh to not create file in the source directory!
-# BTW: you can ignore the chmod command - as we use the trick with '/bin/bash /tmp/NW751/install.sh'.
+# Otherwise, the script will try to create a new temporary file in the your NW751 directory.
+#
+# $ patch NW751/install.sh 0001-Create-temp-inst-file-in-temp-dir.patch
 
-# $ docker build -v $PWD/NW751:/tmp/NW751 -t nwabap .
-
-# Here is the patch:
-# --- NW751/install.sh.bck        2018-03-23 14:17:01.833180534 +0100
-# +++ NW751/install.sh    2018-03-23 14:20:22.346916898 +0100
-# @@ -306,9 +306,10 @@
-#          echo "Now we begin with the installation."
-#          echo "Be patient, this will take a while ... "
-#          echo " " 
-# -        cp ${dvd_drive}/${dvd_dist_dir}/sapinst.txt ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt
-# -       sed -i  "s/<INST_HOST>/${virt_hostname}/g" ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt 
-# -       sed -i  "s/<Appl1ance>/${masterpwd}/g" ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt 
-# +       local sapinstmod=$(mktemp -d)/sapinstmod.txt
-# +        cp ${dvd_drive}/${dvd_dist_dir}/sapinst.txt $sapinstmod
-# +       sed -i  "s/<INST_HOST>/${virt_hostname}/g" $sapinstmod
-# +       sed -i  "s/<Appl1ance>/${masterpwd}/g" $sapinstmod
-#           # now install the software 
-#         if [ x"${skip_kernel_parameters}" = "xy" ]; then
-#                 echo "Kernel parameters not set!"
-# @@ -325,9 +326,9 @@
-#          /usr/sap/hostctrl/exe/SAPCAR -xf ${dvd_drive}/${dvd_dist_dir}/SWPM10*.SAR -R /tmp/swpm
-#         cd /tmp/swpm/
-#         if [ x"${guimode}" = "xy" ]; then
-# -               ./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt
-# +               ./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=$sapinstmod
-#         else
-# -               ./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt -nogui -noguiserver SAPINST_SKIP_DIALOGS=true
-# +               ./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=$sapinstmod -nogui -noguiserver SAPINST_SKIP_DIALOGS=true
-#         fi
-#         if [ $? -eq 0 ]; then
-#                 rm -rf /tmp/sapinst_instdir
+# Finally, run the build command.
+#
+# $ docker build \
+#    -v $PWD/NW751:/tmp/NW751 \
+#    -v $PWD/mock_hostname/ld.so.preload:/etc/ld.so.preload \
+#    -v $PWD/mock_hostname/libmockhostname.so:/usr/local/lib64/libmockhostname.so \
+#    -t nwabap .
