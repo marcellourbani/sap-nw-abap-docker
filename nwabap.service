@@ -1,0 +1,11 @@
+[Unit]
+Description=Start SAP
+After=uuidd.socket
+Requisite=uuidd.socket
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/su - npladm -c "startsap"
+
+[Install]
+WantedBy=multi-user.target

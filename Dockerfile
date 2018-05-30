@@ -50,6 +50,12 @@ RUN  export HOSTNAME="vhcalnplci"; \
      test $(hostname) == $HOSTNAME || exit 1; \
      ./run.sh
 
+RUN systemctl enable uuidd
+COPY nwabap.service /etc/systemd/system
+RUN systemctl enable nwabap
+
+ENTRYPOINT ["/usr/lib/systemd/systemd", "--system"]
+
 # Command sequence to use this Dockerfile
 
 # Before you start, please, configured docker to use devicemapper and set dm.basesize to 60G.
