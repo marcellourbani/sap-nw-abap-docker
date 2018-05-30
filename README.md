@@ -36,6 +36,12 @@ docker build -v $PWD/NW751:/tmp/NW751 -v $PWD/mock_hostname/ld.so.preload:/etc/l
 docker run -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro -p 3200:3200 -p 3300:3300 -p 8000:8000 -p 44300:44300 -h vhcalnplci --name myabap nwabap
 ```
 
+or alternatively, use docker-compose
+
+```sh
+docker-compose up -d
+```
+
 4. Done. NetWeaver ABAP is installed and ready to be used. Users, credentials, etc can be found in the fie readme.html shipped with the NetWeaver ABAP RAR files.
 
 5. Now, you should register the system and commit the container myabap as a new image
