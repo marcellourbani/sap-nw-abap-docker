@@ -1,0 +1,61 @@
+From 1f2697e5efc1ad576e3362a5a833334c23d29634 Mon Sep 17 00:00:00 2001
+From: Jakub Filak <jakub.filak@sap.com>
+Date: Wed, 28 Mar 2018 16:19:07 +0200
+Subject: [PATCH] Create temp inst file in temp dir
+
+Installation directories should be read-only - that helps sharing the
+directories among several servers.
+
+I run in to the problem when creating a docker image this way:
+
+  $ docker build -v $PWD/archives:/tmp/archives -t nw .
+---
+ src/install.sh | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/src/install.sh b/src/install.sh
+index 3eaefb0..119ead2 100644
+--- a/src/install.sh
++++ b/src/install.sh
+@@ -306,9 +306,23 @@ server_install() {
+         echo "Now we begin with the installation."
+         echo "Be patient, this will take a while ... "
+         echo " " 
+-        cp ${dvd_drive}/${dvd_dist_dir}/sapinst.txt ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt
+-	sed -i  "s/<INST_HOST>/${virt_hostname}/g" ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt 
+-	sed -i  "s/<Appl1ance>/${masterpwd}/g" ${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt 
++
++	local sapinstmoddir=$(mktemp -d)
++	if [ -z "$sapinstmoddir" ]; then
++		echo -e "Exiting: failed to create a temporary directory" >&2
++		exit 1
++	fi
++
++	local sapinstmod=$sapinstmod/sapinstmod.txt
++
++        cp ${dvd_drive}/${dvd_dist_dir}/sapinst.txt $sapinstmod || {
++		echo -e "Exiting: failed to create a temporary install configuration file" >&2
++		exit 1
++	}
++
++	sed -i  "s/<INST_HOST>/${virt_hostname}/g" $sapinstmod
++	sed -i  "s/<Appl1ance>/${masterpwd}/g" $sapinstmod
++
+          # now install the software 
+ 	if [ x"${skip_kernel_parameters}" = "xy" ]; then
+ 		echo "Kernel parameters not set!"
+@@ -325,9 +339,9 @@ server_install() {
+         /usr/sap/hostctrl/exe/SAPCAR -xf ${dvd_drive}/${dvd_dist_dir}/SWPM10*.SAR -R /tmp/swpm
+ 	cd /tmp/swpm/
+ 	if [ x"${guimode}" = "xy" ]; then
+-		./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt
++		./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=$sapinstmod
+ 	else
+-        	./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=${dvd_drive}/${dvd_dist_dir}/sapinstmod.txt -nogui -noguiserver SAPINST_SKIP_DIALOGS=true
++        	./sapinst product.catalog SAPINST_EXECUTE_PRODUCT_ID=NW_StorageBasedCopy SAPINST_INPUT_PARAMETERS_URL=$sapinstmod -nogui -noguiserver SAPINST_SKIP_DIALOGS=true
+ 	fi
+ 	if [ $? -eq 0 ]; then
+ 		rm -rf /tmp/sapinst_instdir
+-- 
+2.14.3
+
