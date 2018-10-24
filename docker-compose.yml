@@ -1,7 +1,7 @@
 version: '3'
 services:
   nwabap:
-    image: nwabap
+image: abaptrial:752
     hostname: vhcalnplci
     ports:
       - "5000:5000"
@@ -11,4 +11,4 @@ services:
       - "44300:44300"
     volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    container_name: myabap
+    container_name: abaptrial

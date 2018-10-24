@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+if [[ ${1:-} == '--with-coverage' ]]; then
+    coverage run -m unittest discover
+    coverage report -m
+else
+    python -m unittest discover
+fi
