@@ -64,6 +64,9 @@ COPY utils/src/sap_add_trusted_server_cert /usr/local/bin
 # Add the installer expect
 COPY utils/src/install.expect /usr/local/bin
 
+RUN mkdir /usr/local/bin/mock
+COPY utils/src/mock/sysctl /usr/local/bin/mock
+
 # HOSTNAME is imbued into SAP stuff - so we must convince the installer
 # to use the well known HOSTNAME.
 # And we have to try really hard, so don't forget to start docker build with:
