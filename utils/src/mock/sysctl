@@ -1,0 +1,17 @@
+#!/bin/sh
+
+test -f /bin/sysctl && {
+    /bin/sysctl $@; exit 0;
+}
+
+test -f /usr/bin/sysctl && {
+    /usr/bin/sysctl $@; exit 0;
+}
+
+test -f /sbin/sysctl && {
+    /sbin/sysctl $@; exit 0;
+}
+
+test -f /usr/sbin/sysctl && {
+    /usr/sbin/sysctl $@; exit 0;
+}
