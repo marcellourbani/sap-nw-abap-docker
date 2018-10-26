@@ -56,7 +56,7 @@ COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
 # Install PyRFC
 RUN pip install --upgrade pip
 RUN cd /var/tmp && curl -LO https://github.com/SAP/PyRFC/raw/master/dist/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && \
-pip install /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && rm -f /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl
+    pip install /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && rm -f /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl
 
 # Install the utility for adding trusted certs over RFC
 COPY utils/src/sap_add_trusted_server_cert /usr/local/bin
@@ -84,9 +84,10 @@ RUN  echo $(grep $(uname -n) /etc/hosts | cut -f1 -d$'\t')  "vhcalnplci" >> /etc
      echo "export HOSTNAME=$HOSTNAME" >> /etc/profile; \
      test $(hostname) == $HOSTNAME || exit 1; \
      export SAP_LOG_FILE="/var/tmp/abap_trial_install.log"; \
-     (/usr/local/bin/install.expect --pasword "S3cr3tP@ssw0rd" --accept-SAP-developer-license || exit 1; \
+     export PATH=/usr/local/bin/mock:$PATH; \
+     (/usr/local/bin/install.expect --password "S3cr3tP@ssw0rd" --accept-SAP-developer-license || exit 1; \
        (export LD_LIBRARY_PATH=/sapmnt/NPL/exe/uc/linuxx86_64; \
-        python /usr/local/bin/sap_add_trusted_server_cert /etc/pki/ca-trust/source/SAP/*.cer); \
+        python /usr/local/bin/sap_add_trusted_server_cert -v /etc/pki/ca-trust/source/SAP/*.cer); \
       su - npladm -c "stopsap ALL")
 
 # Here it comes, start your containers without the need to attach/exec and
