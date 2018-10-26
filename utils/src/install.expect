@@ -63,7 +63,7 @@ if {$password == ""} {
 }
 
 set timeout 5
-spawn /var/tmp/ABAP_Trial/install.sh
+spawn bash /var/tmp/ABAP_Trial/install.sh
 
 set status 10
 expect {
