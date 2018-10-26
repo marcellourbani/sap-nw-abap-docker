@@ -78,10 +78,10 @@ COPY utils/src/mock/sysctl /usr/local/bin/mock
 #   https://github.com/jfilak/snippets/tree/master/mock_hostname
 #
 # Note: Password being used is S3cr3tP@ssw0rd
-RUN  export HOSTNAME="vhcalnplci"; \
+RUN  echo $(grep $(uname -n) /etc/hosts | cut -f1 -d$'\t')  "vhcalnplci" >> /etc/hosts; \
+     export HOSTNAME="vhcalnplci"; \
      echo $HOSTNAME > /etc/hostname; \
      echo "export HOSTNAME=$HOSTNAME" >> /etc/profile; \
-     echo 127.0.0.1   $HOSTNAME >> /etc/hosts; \
      test $(hostname) == $HOSTNAME || exit 1; \
      export SAP_LOG_FILE="/var/tmp/abap_trial_install.log"; \
      (/usr/local/bin/install.expect --pasword "S3cr3tP@ssw0rd" --accept-SAP-developer-license || exit 1; \
