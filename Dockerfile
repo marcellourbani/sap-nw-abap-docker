@@ -90,6 +90,9 @@ RUN  echo $(grep $(uname -n) /etc/hosts | cut -f1 -d$'\t')  "vhcalnplci" >> /etc
         python /usr/local/bin/sap_add_trusted_server_cert -v /etc/pki/ca-trust/source/SAP/*.cer); \
       su - npladm -c "stopsap ALL")
 
+# Persist database
+# VOLUME [ "/sybase/NPL/sapdata_1" ]
+
 # Here it comes, start your containers without the need to attach/exec and
 # start SAP processes manually.
 #
