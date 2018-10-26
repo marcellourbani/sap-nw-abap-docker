@@ -51,7 +51,7 @@ RUN systemctl enable nwabap uuidd
 
 # Copy trusted server certificates
 RUN mkdir -p /etc/pki/ca-trust/source/SAP
-COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP
+COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
 
 # Install PyRFC
 RUN pip install --upgrade pip
