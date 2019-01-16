@@ -1,4 +1,5 @@
 # sap-nw-abap-docker
+
 SAP NetWeaver ABAP Developer Edition in Docker
 
 ## What's in?
@@ -12,11 +13,11 @@ not possible to specify hostname on docker build command line.
 One of the hack is changing the C functions returning hostname using
 the library [libmock_hostname](https://github.com/jfilak/snippets/tree/master/mock_hostname).
 
-
 ## Extra content
 
 The Dockerfile installs [PyRFC](https://github.com/SAP/PyRFC). If you want to use it, you need to
 start python like this:
+
 ```bash
 LD_LIBRARY_PATH=/sapmnt/NPL/exe/uc/linuxx86_64 python
 ```
@@ -24,7 +25,7 @@ LD_LIBRARY_PATH=/sapmnt/NPL/exe/uc/linuxx86_64 python
 I didn't put that path into the file /etc/ld.so.conf to avoid unintended side
 effects in other SAP tools.
 
-I install PyRFC to be able to call the function module SSFR__PUT__CRETIFICATE
+I install PyRFC to be able to call the function module SSFR**PUT**CRETIFICATE
 to make SSL communication with GitHub trusted after the installation.
 
 You can see the installed certificates in the directory [files/certs](files/certs/).
@@ -44,7 +45,7 @@ docker daemon --storage-opt dm.basesize=60G
 2. Build the Docker image
 
 ```sh
-docker build -v $PWD/NW752:/var/tmp/ABAP_Trial/NW752 -v $PWD/mock_hostname/ld.so.preload:/etc/ld.so.preload -v $PWD/mock_hostname/libmockhostname.so:/usr/local/lib64/libmockhostname.so -t abaptrial:752 .
+docker build -v $PWD/NW752:/var/tmp/ABAP_Trial/NW752 -v $PWD/mock_hostname/ld.so.preload:/etc/ld.so.preload -v $PWD/mock_hostname/libmock_hostname.so:/usr/local/lib64/libmock_hostname.so -t abaptrial:752 .
 ```
 
 3. Start the Docker container
