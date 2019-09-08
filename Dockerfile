@@ -1,8 +1,11 @@
-FROM opensuse/leap
+FROM fedora:latest
 
 # Make sure we do not spend time preparing the OS
 # while the installation sources are not mounted.
 #RUN test -f /var/tmp/ABAP_Trial/install.sh
+
+COPY mock_hostname/libmock_hostname.so /usr/local/lib64/
+COPY mock_hostname/ld.so.preload /etc/
 
 # General information
 LABEL de.itsfullofstars.sapnwdocker.version="1.0.0-filak-sap-2"
@@ -25,10 +28,9 @@ ENV container docker
 
 # Install dependencies and configure systemd to start only the services we
 # need!
-RUN zypper refresh -y; zypper dup -y; \
-  zypper --non-interactive install --replacefiles  systemd uuid libaio gzip uuidd expect tcsh which iputils vim \
-  hostname tar net-tools iproute2 curl python-openssl python-pip; \
-  zypper clean; \
+RUN dnf -y install uuid uuidd expect tcsh which iputils vim hostname net-tools iproute python-pip procps-ng \
+  libaio passwd libnsl; \
+  dnf clean all; \
   (cd /usr/lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
   rm -f /usr/lib/systemd/system/multi-user.target.wants/*;\
   rm -f /etc/systemd/system/*.wants/*;\
@@ -50,7 +52,7 @@ COPY nwabap.service /etc/systemd/system
 
 # Avoid the need to start uuidd manually.
 # BTW, uuidd is not needed for the installation.
-RUN systemctl enable nwabap uuidd
+RUN systemctl enable uuidd
 # Copy trusted server certificates
 RUN mkdir -p /etc/pki/ca-trust/source/SAP
 COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
