@@ -1,8 +1,8 @@
-FROM opensuse:latest
+FROM opensuse/leap
 
 # Make sure we do not spend time preparing the OS
 # while the installation sources are not mounted.
-RUN test -f /var/tmp/ABAP_Trial/install.sh
+#RUN test -f /var/tmp/ABAP_Trial/install.sh
 
 # General information
 LABEL de.itsfullofstars.sapnwdocker.version="1.0.0-filak-sap-2"
@@ -26,16 +26,19 @@ ENV container docker
 # Install dependencies and configure systemd to start only the services we
 # need!
 RUN zypper refresh -y; zypper dup -y; \
-zypper --non-interactive install --replacefiles  systemd uuidd expect tcsh which iputils vim hostname tar net-tools iproute2 curl python-openssl python-pip; \
-zypper clean; \
-(cd /usr/lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
-rm -f /usr/lib/systemd/system/multi-user.target.wants/*;\
-rm -f /etc/systemd/system/*.wants/*;\
-rm -f /usr/lib/systemd/system/local-fs.target.wants/*; \
-rm -f /usr/lib/systemd/system/sockets.target.wants/*udev*; \
-rm -f /usr/lib/systemd/system/sockets.target.wants/*initctl*; \
-rm -f /usr/lib/systemd/system/basic.target.wants/*;\
-rm -f /usr/lib/systemd/system/anaconda.target.wants/*;
+  zypper --non-interactive install --replacefiles  systemd uuid libaio gzip uuidd expect tcsh which iputils vim \
+  hostname tar net-tools iproute2 curl python-openssl python-pip; \
+  zypper clean; \
+  (cd /usr/lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+  rm -f /usr/lib/systemd/system/multi-user.target.wants/*;\
+  rm -f /etc/systemd/system/*.wants/*;\
+  rm -f /usr/lib/systemd/system/local-fs.target.wants/*; \
+  rm -f /usr/lib/systemd/system/sockets.target.wants/*udev*; \
+  rm -f /usr/lib/systemd/system/sockets.target.wants/*initctl*; \
+  rm -f /usr/lib/systemd/system/basic.target.wants/*;\
+  rm -f /usr/lib/systemd/system/anaconda.target.wants/*;
+
+RUN systemctl set-default multi-user.target
 
 # We need to start the container with cgroups:
 # $ docker run -v /sys/fs/cgroup:/sys/fs/cgroup:ro ...
@@ -48,7 +51,6 @@ COPY nwabap.service /etc/systemd/system
 # Avoid the need to start uuidd manually.
 # BTW, uuidd is not needed for the installation.
 RUN systemctl enable nwabap uuidd
-
 # Copy trusted server certificates
 RUN mkdir -p /etc/pki/ca-trust/source/SAP
 COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
@@ -56,7 +58,7 @@ COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
 # Install PyRFC
 RUN pip install --upgrade pip
 RUN cd /var/tmp && curl -LO https://github.com/SAP/PyRFC/raw/master/dist/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && \
-    pip install /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && rm -f /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl
+  pip install /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && rm -f /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl
 
 # Install the utility for adding trusted certs over RFC
 COPY utils/src/sap_add_trusted_server_cert /usr/local/bin
@@ -78,17 +80,8 @@ COPY utils/src/mock/sysctl /usr/local/bin/mock
 #   https://github.com/jfilak/snippets/tree/master/mock_hostname
 #
 # Note: Password being used is S3cr3tP@ssw0rd
-RUN  echo $(grep $(uname -n) /etc/hosts | cut -f1 -d$'\t')  "vhcalnplci" >> /etc/hosts; \
-     export HOSTNAME="vhcalnplci"; \
-     echo $HOSTNAME > /etc/hostname; \
-     echo "export HOSTNAME=$HOSTNAME" >> /etc/profile; \
-     test $(hostname) == $HOSTNAME || exit 1; \
-     export SAP_LOG_FILE="/var/tmp/abap_trial_install.log"; \
-     export PATH=/usr/local/bin/mock:$PATH; \
-     (/usr/local/bin/install.expect --password "S3cr3tP@ssw0rd" --accept-SAP-developer-license || exit 1; \
-       (export LD_LIBRARY_PATH=/sapmnt/NPL/exe/uc/linuxx86_64; \
-        python /usr/local/bin/sap_add_trusted_server_cert -v /etc/pki/ca-trust/source/SAP/*.cer); \
-      su - npladm -c "stopsap ALL")
+COPY utils/src/installSAP.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/installSAP.sh
 
 # Persist database
 # VOLUME [ "/sybase/NPL/sapdata_1" ]
