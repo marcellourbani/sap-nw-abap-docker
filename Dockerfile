@@ -54,10 +54,11 @@ RUN mkdir -p /etc/pki/ca-trust/source/SAP
 COPY files/certs/*.cer /etc/pki/ca-trust/source/SAP/
 
 # Install PyRFC
-RUN pip install --upgrade pip
-RUN cd /var/tmp && curl -LO https://github.com/SAP/PyRFC/raw/master/dist/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && \
-    pip install /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl && rm -f /var/tmp/pyrfc-1.9.93-cp27-cp27mu-linux_x86_64.whl
-
+RUN pip install --upgrade pip && \
+    cd /var/tmp &&\
+    curl -LO https://github.com/SAP/PyRFC/releases/download/1.9.99/pyrfc-1.9.99-cp27-cp27mu-linux_x86_64.whl&& \
+    pip install  /var/tmp/pyrfc-1.9.99-cp27-cp27mu-linux_x86_64.whl && \
+    rm -f /var/tmp/pyrfc-1.9.99-cp27-cp27mu-linux_x86_64.whl
 # Install the utility for adding trusted certs over RFC
 COPY utils/src/sap_add_trusted_server_cert /usr/local/bin
 
